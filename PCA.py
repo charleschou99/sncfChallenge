@@ -1,46 +1,40 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from format_x import preprocess_df
+from sklearn.cluster import KMeans
+from sklearn.svm import OneClassSVM
+import numpy as np
 
-def perform_PCA_x():
-    # Load the training data
-    df = pd.read_csv("x_train_final.csv")
-    df_processed = preprocess_df(df)
+df = pd.read_csv("x_train_pca.csv")
 
-    # Standardize the data for PCA (important when features have different scales)
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df_processed)
 
-    # Perform PCA (here we choose 10 components for illustration; adjust as needed)
-    pca = PCA(n_components=10)
-    X_pca = pca.fit_transform(X_scaled)
+# Extract the first principal component from the PCA results and reshape to a 2D array
+pc1 = df["pca_one"].to_numpy().reshape(-1, 1)
 
-    # --- Plotting Explained Variance Ratio ---
-    plt.figure(figsize=(10, 6))
-    components = range(1, len(pca.explained_variance_ratio_) + 1)
-    plt.bar(components, pca.explained_variance_ratio_, alpha=0.7)
-    plt.xlabel('Principal Component')
-    plt.ylabel('Explained Variance Ratio')
-    plt.title('Explained Variance Ratio by Principal Component')
-    plt.xticks(components)
-    plt.tight_layout()
-    plt.savefig("pca_explained_variance.png")
-    plt.show()
+# Using only PC1 for clustering (reshaped already as pc1 from previous blocks)
+# Apply KMeans with 2 clusters on PC1 and enable verbose output.
+kmeans_2 = KMeans(n_clusters=2, random_state=42, verbose=1)
+clusters = kmeans_2.fit_predict(pc1)
 
-    # --- Scatter Plot of the First Two Principal Components ---
-    plt.figure(figsize=(10, 6))
-    plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.5)
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.title('Projection on the First Two Principal Components')
-    plt.tight_layout()
-    plt.savefig("pca_scatter.png")
-    plt.show()
+# Display cluster distribution
+cluster_counts = pd.Series(clusters).value_counts()
+print("Cluster distribution:\n", cluster_counts)
 
-    # Save the PCA-transformed data for potential future use
-    pca_columns = [f'PC{i}' for i in components]
-    df_pca = pd.DataFrame(X_pca, columns=pca_columns)
-    df_pca.to_csv("x_train_pca.csv", index=False)
-    print("PCA results saved to x_train_pca.csv")
+# Heuristically, we assume the minority cluster corresponds to outliers.
+# Identify the cluster with the fewest members.
+outlier_cluster = cluster_counts.idxmin()
+print("Assumed outlier cluster:", outlier_cluster)
+
+# Create outlier labels: assign -1 for outliers and 1 for inliers.
+clusters_outlier_label = np.where(clusters == outlier_cluster, -1, 1)
+
+# Save the outlier labels into the dataframe
+df['cluster_outlier'] = clusters_outlier_label
+
+# Plot PC1 with outlier detection via KMeans classification
+plt.figure(figsize=(10, 6))
+plt.scatter(range(len(pc1)), pc1, c=clusters_outlier_label, cmap='coolwarm', alpha=0.6)
+plt.xlabel("Sample Index")
+plt.ylabel("First Principal Component (PC1)")
+plt.title("Outlier Detection using KMeans (2 Clusters) on PC1")
+plt.colorbar(label="Outlier Label (-1: Outlier, 1: Inlier)")
+plt.show()
