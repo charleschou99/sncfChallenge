@@ -6,7 +6,6 @@ import numpy as np
 
 df = pd.read_csv("x_train_pca.csv")
 
-
 # Extract the first principal component from the PCA results and reshape to a 2D array
 pc1 = df["pca_one"].to_numpy().reshape(-1, 1)
 
@@ -30,11 +29,6 @@ clusters_outlier_label = np.where(clusters == outlier_cluster, -1, 1)
 # Save the outlier labels into the dataframe
 df['cluster_outlier'] = clusters_outlier_label
 
-# Plot PC1 with outlier detection via KMeans classification
-plt.figure(figsize=(10, 6))
-plt.scatter(range(len(pc1)), pc1, c=clusters_outlier_label, cmap='coolwarm', alpha=0.6)
-plt.xlabel("Sample Index")
-plt.ylabel("First Principal Component (PC1)")
-plt.title("Outlier Detection using KMeans (2 Clusters) on PC1")
-plt.colorbar(label="Outlier Label (-1: Outlier, 1: Inlier)")
-plt.show()
+new_df = df[df['cluster_outlier']==1]
+
+new_df.to_csv('x_train_no_outlier.csv')
