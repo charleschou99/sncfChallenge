@@ -5,8 +5,14 @@ X_train = pd.read_csv("x_train_final.csv")
 X_test = pd.read_csv("x_test_final.csv")
 
 train_list = X_train['train'].to_list() + X_test['train'].to_list()
-# Initialize the LabelEncoder
-LE = LabelEncoder()
+gare_list = X_train['gare'].to_list() + X_test["gare"].to_list()
 
+# Initialize the LabelEncoder
+TrainEncoder = LabelEncoder()
 # Fit and transform the 'trains' column
-LE.fit(train_list)
+TrainEncoder.fit(train_list)
+
+# Initialize the LabelEncoder
+GareEncoder = LabelEncoder()
+# Fit and transform the 'gare' column
+GareEncoder.fit(gare_list)
