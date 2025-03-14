@@ -8,10 +8,18 @@ from sklearn.preprocessing import StandardScaler
 # --- Training Phase ---
 # Read the training data
 X_train = pd.read_csv("x_train_no_outlier.csv")
-X_train["train"] = TrainEncoder.transform(X_train['train'])
+# X_train["train"] = TrainEncoder.transform(X_train['train'])
 X_train["gare"] = GareEncoder.transform(X_train['gare'])
 
-df_train = X_train[["train", "gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+X_train['date'] = pd.to_datetime(X_train['date'], errors='coerce')
+# Extract additional date features
+X_train['year'] = X_train['date'].dt.year
+X_train['month'] = X_train['date'].dt.month
+X_train['day'] = X_train['date'].dt.day
+X_train['dayofweek'] = X_train['date'].dt.dayofweek
+X_train['weekofyear'] = X_train['date'].dt.isocalendar().week.astype(int)
+
+df_train = X_train[['weekofyear', 'dayofweek', "gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
 y_train = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
 
 print("Training features shape:", df_train.shape)
@@ -36,22 +44,22 @@ print("Cross Validation RMSE:", rmse_cv)
 # Fit the model on the full scaled training data
 model.fit(X_train_scaled, y_train)
 
-# --- Prediction Phase ---
-# Read and preprocess the test data
-X_test = pd.read_csv("x_test_final.csv")
-X_test["train"] = TrainEncoder.transform(X_test['train'])
-X_test["gare"] = GareEncoder.transform(X_test['gare'])
-df_test = X_test[["train", "gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
-# Reindex to ensure the test set has the same columns as the training set
-df_test = df_test.reindex(columns=df_train.columns, fill_value=0)
-
-# Scale the test features using the same scaler fitted on the training data
-X_test_scaled = scaler.transform(df_test)
-
-# Predict using the fitted model on scaled test data
-y_pred = model.predict(X_test_scaled)
-df_out = pd.DataFrame(y_pred, columns=["p0q0"])
-df_out.to_csv("ridge_first_submission.csv")
+# # --- Prediction Phase ---
+# # Read and preprocess the test data
+# X_test = pd.read_csv("x_test_final.csv")
+# # X_test["train"] = TrainEncoder.transform(X_test['train'])
+# X_test["gare"] = GareEncoder.transform(X_test['gare'])
+# df_test = X_test[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+# # Reindex to ensure the test set has the same columns as the training set
+# df_test = df_test.reindex(columns=df_train.columns, fill_value=0)
+#
+# # Scale the test features using the same scaler fitted on the training data
+# X_test_scaled = scaler.transform(df_test)
+#
+# # Predict using the fitted model on scaled test data
+# y_pred = model.predict(X_test_scaled)
+# df_out = pd.DataFrame(y_pred, columns=["p0q0"])
+# df_out.to_csv("ridge_first_submission.csv")
 
 # Optionally, if you have the true test target values, you could compute test metrics as well:
 # y_test = pd.read_csv("y_test_final.csv").iloc[:, 2]  # adjust column index as needed
