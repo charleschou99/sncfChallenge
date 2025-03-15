@@ -4,6 +4,8 @@ from sklearn.linear_model import RidgeCV
 from sklearn.model_selection import cross_val_score
 from encoders import TrainEncoder, GareEncoder
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error
+
 
 # --- Training Phase ---
 # Read the training data
@@ -44,26 +46,24 @@ print("Cross Validation RMSE:", rmse_cv)
 # Fit the model on the full scaled training data
 model.fit(X_train_scaled, y_train)
 
-# # --- Prediction Phase ---
-# # Read and preprocess the test data
-# X_test = pd.read_csv("x_test_final.csv")
-# # X_test["train"] = TrainEncoder.transform(X_test['train'])
-# X_test["gare"] = GareEncoder.transform(X_test['gare'])
-# df_test = X_test[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
-# # Reindex to ensure the test set has the same columns as the training set
-# df_test = df_test.reindex(columns=df_train.columns, fill_value=0)
-#
-# # Scale the test features using the same scaler fitted on the training data
-# X_test_scaled = scaler.transform(df_test)
-#
-# # Predict using the fitted model on scaled test data
-# y_pred = model.predict(X_test_scaled)
-# df_out = pd.DataFrame(y_pred, columns=["p0q0"])
-# df_out.to_csv("ridge_first_submission.csv")
+# --- Prediction Phase ---
+# Read and preprocess the test data
+X_test = pd.read_csv("x_test_final.csv")
+# X_test["train"] = TrainEncoder.transform(X_test['train'])
+X_test["gare"] = GareEncoder.transform(X_test['gare'])
+df_test = X_test[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+# Reindex to ensure the test set has the same columns as the training set
+df_test = df_test.reindex(columns=df_train.columns, fill_value=0)
+
+# Scale the test features using the same scaler fitted on the training data
+X_test_scaled = scaler.transform(df_test)
+
+# Predict using the fitted model on scaled test data
+y_pred = model.predict(X_test_scaled)
+df_out = pd.DataFrame(y_pred, columns=["p0q0"])
+df_out.to_csv("ridge_first_submission.csv")
 
 # Optionally, if you have the true test target values, you could compute test metrics as well:
-# y_test = pd.read_csv("y_test_final.csv").iloc[:, 2]  # adjust column index as needed
-# mse_test = mean_squared_error(y_test, y_pred)
-# rmse_test = np.sqrt(mse_test)
-# print("Test MSE:", mse_test)
-# print("Test RMSE:", rmse_test)
+y_test = pd.read_csv("y_test_final.csv").iloc[:, 2]  # adjust column index as needed
+mae_test = mean_absolute_error(y_test, y_pred)
+print("Test MAE:", mae_test)
