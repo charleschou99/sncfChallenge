@@ -4,8 +4,8 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error
 from encoders import TrainEncoder, GareEncoder
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error
 
-# Load training features and target
 X_initial = pd.read_csv("x_train_no_outlier.csv")
 y = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
 
@@ -20,45 +20,46 @@ X_initial['day'] = X_initial['date'].dt.day
 X_initial['dayofweek'] = X_initial['date'].dt.dayofweek
 X_initial['weekofyear'] = X_initial['date'].dt.isocalendar().week.astype(int)
 
-X = X_initial[['year', 'weekofyear', 'dayofweek', "train", "gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+X = X_initial[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]] #'year', 'weekofyear', 'dayofweek', "train",
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
 # Split data into training and validation sets
-X_train, X_val, y_train, y_val = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_scaled, y, test_size=0.2, random_state=203)
 
-# Initialize XGBoost regressor
-xgb_reg = xgb.XGBRegressor(objective="reg:squarederror", random_state=42)
+# Create regression matrices
+dtrain_reg = xgb.DMatrix(X_train, y_train, enable_categorical=True)
+dtest_reg = xgb.DMatrix(X_val, y_val, enable_categorical=True)
 
-# Define a grid of hyperparameters for tuning
-param_grid = {
-    "n_estimators": [100, 500],
-    "max_depth": [15],
-    "learning_rate": [0.01, 0.05, 0.1, 0.2],
-    "subsample": [0.5, 0.8, 1.0]
+# Define hyperparameters
+params = {
+    "objective": "reg:absoluteerror",
+    "tree_method": "gpu_hist",
+    "booster": "gbtree",
+    "subsample":0.6,
+    "learning_rate":0.015,
+    "eval_metric":"mae",
 }
 
-# Setup GridSearchCV with 3-fold cross-validation; verbose=1 enables progress output
-grid_search = GridSearchCV(estimator=xgb_reg, param_grid=param_grid, cv=5,
-                           scoring="neg_mean_squared_error", verbose=1, n_jobs=-1)
+n = 65000
+model = xgb.train(
+   params=params,
+   dtrain=dtrain_reg,
+   num_boost_round=n,
+)
 
-# Run the grid search on the training data
-grid_search.fit(X_train, y_train)
+# Predictions
+y_train_pred = model.predict(dtrain_reg)
+y_test_pred = model.predict(dtest_reg)
 
-# Display the best hyperparameters found
-print("Best Hyperparameters:", grid_search.best_params_)
+# Compute the Mean Absolute Error on the training set
+mae_train = mean_absolute_error(y_train, y_train_pred)
+print("Training Set MAE:", mae_train)
 
-# Predict on the training set using the best model
-best_model = grid_search.best_estimator_
-y_train_pred = best_model.predict(X_train)
-y_test_pred = best_model.predict(X_val)
+mae_test = mean_absolute_error(y_val, y_test_pred)
+print("Test Set MAE:", mae_test)
 
-# Compute the Mean Squared Error (MSE) on the training set
-mse_train = mean_squared_error(y_train, y_train_pred)
-print("Training Set MSE:", mse_train)
 
-mse_test = mean_squared_error(y_val, y_test_pred)
-print("Test Set MSE:", mse_test)
 
 # --- Prediction Phase ---
 # Read and preprocess the test data
@@ -76,14 +77,15 @@ X_test['dayofweek'] = X_test['date'].dt.dayofweek
 X_test['weekofyear'] = X_test['date'].dt.isocalendar().week.astype(int)
 
 
-df_test = X_test[['year', 'weekofyear', 'dayofweek', "train", "gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+df_test = X_test[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
 # Reindex to ensure the test set has the same columns as the training set
 df_test = df_test.reindex(columns=df_test.columns, fill_value=0)
 
 # Scale the test features using the same scaler fitted on the training data
 X_test_scaled = scaler.transform(df_test)
+dtest_final = xgb.DMatrix(X_test_scaled, enable_categorical=True)
 
 # Predict using the fitted model on scaled test data
-y_pred = best_model.predict(X_test_scaled)
+y_pred = model.predict(dtest_final)
 df_out = pd.DataFrame(y_pred, columns=["p0q0"])
-df_out.to_csv("xgboost_first_submission.csv")
+df_out.to_csv("xgboost_no_new.csv")
