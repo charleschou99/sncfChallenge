@@ -30,8 +30,16 @@ clusters_outlier_label = np.where(clusters == outlier_cluster, -1, 1)
 # Save the outlier labels into the dataframe
 df['cluster_outlier'] = clusters_outlier_label
 
-new_df = df[df['cluster_outlier']==1]
-new_y_df = df_y[df_y["Unnamed: 0"].isin(new_df["Unnamed: 0"])]
+# First version of outliers
+# new_df = df[df['cluster_outlier']==1]
+# new_y_df = df_y[df_y["Unnamed: 0"].isin(new_df["Unnamed: 0"])]
+#
+# new_df.to_csv('x_train_no_outlier.csv')
+# new_y_df.to_csv('y_train_no_outlier.csv')
 
-new_df.to_csv('x_train_no_outlier.csv')
-new_y_df.to_csv('y_train_no_outlier.csv')
+# Second version, we take out all trains that have at least one outlier
+outlier_train = df[df['cluster_outlier']==-1]['train'].drop_duplicates().to_list()
+new_df = df[~df['train'].isin(outlier_train)]
+new_y_df = df_y[df_y["Unnamed: 0"].isin(new_df["Unnamed: 0"])]
+new_df.to_csv('x_train_no_outlier_new.csv')
+new_y_df.to_csv('y_train_no_outlier_new.csv')

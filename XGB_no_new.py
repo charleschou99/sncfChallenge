@@ -6,8 +6,8 @@ from encoders import TrainEncoder, GareEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 
-X_initial = pd.read_csv("x_train_no_outlier.csv")
-y = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
+X_initial = pd.read_csv("x_train_no_outlier_new.csv")
+y = pd.read_csv("y_train_no_outlier_new.csv").iloc[:, 2]
 
 X_initial["gare"] = GareEncoder.transform(X_initial['gare'])
 X_initial["train"] = TrainEncoder.transform(X_initial['train'])
@@ -35,13 +35,13 @@ dtest_reg = xgb.DMatrix(X_val, y_val, enable_categorical=True)
 params = {
     "objective": "reg:absoluteerror",
     "device": "cuda",
-    "booster": "dart",
+    "booster": "gbtree",
     "subsample":0.6,
     "learning_rate":0.12,
     "eval_metric":"mae",
 }
 
-n = 3000
+n = 50000
 model = xgb.train(
    params=params,
    dtrain=dtrain_reg,
