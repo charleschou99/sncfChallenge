@@ -34,14 +34,14 @@ dtest_reg = xgb.DMatrix(X_val, y_val, enable_categorical=True)
 # Define hyperparameters
 params = {
     "objective": "reg:absoluteerror",
-    "tree_method": "gpu_hist",
-    "booster": "gbtree",
+    "device": "cuda",
+    "booster": "dart",
     "subsample":0.6,
-    "learning_rate":0.015,
+    "learning_rate":0.12,
     "eval_metric":"mae",
 }
 
-n = 65000
+n = 3000
 model = xgb.train(
    params=params,
    dtrain=dtrain_reg,
