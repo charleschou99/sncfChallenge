@@ -2,7 +2,7 @@ import pandas as pd
 from catboost import CatBoostRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
-from encoders import TrainEncoder, GareEncoder
+from encoders import TrainEncoder, GareEncoder, DateEncoder
 from sklearn.preprocessing import StandardScaler
 
 # ---------------------------
@@ -10,12 +10,13 @@ from sklearn.preprocessing import StandardScaler
 # ---------------------------
 
 # Load training features and target
-X_initial = pd.read_csv("x_train_no_outlier.csv")
-y = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
+X_initial = pd.read_csv("x_train_final.csv")
+y = pd.read_csv("y_train_final_j5KGWWK.csv").iloc[:, 1]
 
 # Transform categorical features using custom encoders
 X_initial["gare"] = GareEncoder.transform(X_initial['gare'])
 X_initial["train"] = TrainEncoder.transform(X_initial['train'])
+X_initial["new_date"] = DateEncoder.transform(X_initial["date"])
 
 # Convert 'date' to datetime and extract additional date features
 X_initial['date'] = pd.to_datetime(X_initial['date'], errors='coerce')
@@ -26,7 +27,7 @@ X_initial['dayofweek'] = X_initial['date'].dt.dayofweek
 X_initial['weekofyear'] = X_initial['date'].dt.isocalendar().week.astype(int)
 
 # Select features to be used in the model
-features = ["gare", "arret",
+features = ["gare", "arret", "new_date",
             "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]
 
 X = X_initial[features]
@@ -44,16 +45,16 @@ X_train, X_val, y_train, y_val = train_test_split(X_scaled, y, test_size=0.2, ra
 
 # Initialize CatBoostRegressor with chosen hyperparameters.
 # Using loss_function='MAE' to match our evaluation metric.
-# 'iterations' is set to 1000 with early stopping after 50 rounds without improvement.
 model = CatBoostRegressor(
     loss_function='MAE',
-    iterations=10000,
-    learning_rate=0.2,
+    iterations=3500,
+    learning_rate=0.1,
     verbose=500,
     early_stopping_rounds=100,
     eval_metric="MAE",
     # bootstrap_type="MVS",
-    subsample=0.65,
+    subsample=0.9,
+    max_depth=6
 )
 
 # Train the model, using the validation set for early stopping
@@ -81,6 +82,7 @@ X_test = pd.read_csv("x_test_final.csv")
 # X_test["train"] = TrainEncoder.transform(X_test['train'])
 X_test["gare"] = GareEncoder.transform(X_test['gare'])
 X_test["train"] = TrainEncoder.transform(X_test['train'])
+X_test["new_date"] = DateEncoder.transform(X_test["date"])
 
 X_test['date'] = pd.to_datetime(X_test['date'], errors='coerce')
 # Extract additional date features

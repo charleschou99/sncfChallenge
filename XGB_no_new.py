@@ -2,15 +2,16 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_squared_error
-from encoders import TrainEncoder, GareEncoder
+from encoders import TrainEncoder, GareEncoder, DateEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 
-X_initial = pd.read_csv("x_train_no_outlier_new.csv")
-y = pd.read_csv("y_train_no_outlier_new.csv").iloc[:, 2]
+X_initial = pd.read_csv("x_train_no_outlier.csv")
+y = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
 
 X_initial["gare"] = GareEncoder.transform(X_initial['gare'])
 X_initial["train"] = TrainEncoder.transform(X_initial['train'])
+X_initial["new_date"] = DateEncoder.transform(X_initial["date"])
 
 X_initial['date'] = pd.to_datetime(X_initial['date'], errors='coerce')
 # Extract additional date features
@@ -20,7 +21,11 @@ X_initial['day'] = X_initial['date'].dt.day
 X_initial['dayofweek'] = X_initial['date'].dt.dayofweek
 X_initial['weekofyear'] = X_initial['date'].dt.isocalendar().week.astype(int)
 
-X = X_initial[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]] #'year', 'weekofyear', 'dayofweek', "train",
+
+# Define Features
+features = ["new_date" ,"gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"] #'year', 'weekofyear', 'dayofweek', "train",
+
+X = X_initial[features]
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
@@ -36,12 +41,12 @@ params = {
     "objective": "reg:absoluteerror",
     "device": "cuda",
     "booster": "gbtree",
-    "subsample":0.6,
+    "subsample":0.8,
     "learning_rate":0.12,
     "eval_metric":"mae",
 }
 
-n = 50000
+n = 2500
 model = xgb.train(
    params=params,
    dtrain=dtrain_reg,
@@ -67,6 +72,7 @@ X_test = pd.read_csv("x_test_final.csv")
 # X_test["train"] = TrainEncoder.transform(X_test['train'])
 X_test["gare"] = GareEncoder.transform(X_test['gare'])
 X_test["train"] = TrainEncoder.transform(X_test['train'])
+X_test["new_date"] = DateEncoder.transform(X_test["date"])
 
 X_test['date'] = pd.to_datetime(X_test['date'], errors='coerce')
 # Extract additional date features
@@ -77,7 +83,7 @@ X_test['dayofweek'] = X_test['date'].dt.dayofweek
 X_test['weekofyear'] = X_test['date'].dt.isocalendar().week.astype(int)
 
 
-df_test = X_test[["gare", "arret", "p2q0", "p3q0", "p4q0", "p0q2", "p0q3", "p0q4"]]
+df_test = X_test[features]
 # Reindex to ensure the test set has the same columns as the training set
 df_test = df_test.reindex(columns=df_test.columns, fill_value=0)
 

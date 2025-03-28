@@ -6,8 +6,8 @@ from encoders import TrainEncoder, GareEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 
-X_initial = pd.read_csv("x_train_no_outlier.csv")
-y = pd.read_csv("y_train_no_outlier.csv").iloc[:, 2]
+X_initial = pd.read_csv("../x_train_no_outlier.csv")
+y = pd.read_csv("../y_train_no_outlier.csv").iloc[:, 2]
 
 X_initial["gare"] = GareEncoder.transform(X_initial['gare'])
 X_initial["train"] = TrainEncoder.transform(X_initial['train'])
@@ -34,9 +34,9 @@ dtest_reg = xgb.DMatrix(X_val, y_val, enable_categorical=True)
 # Define hyperparameters
 params = {
     "objective": "reg:absoluteerror",
-    "tree_method": "gpu_hist",
+    "device": "cuda",
     "booster": "gbtree",
-    "subsample":0.5,
+    "subsample":0.6,
     "learning_rate":0.02,
     "eval_metric":"mae",
 }
@@ -63,7 +63,7 @@ print("Test Set MAE:", mae_test)
 
 # --- Prediction Phase ---
 # Read and preprocess the test data
-X_test = pd.read_csv("x_test_final.csv")
+X_test = pd.read_csv("../x_test_final.csv")
 # X_test["train"] = TrainEncoder.transform(X_test['train'])
 X_test["gare"] = GareEncoder.transform(X_test['gare'])
 X_test["train"] = TrainEncoder.transform(X_test['train'])
